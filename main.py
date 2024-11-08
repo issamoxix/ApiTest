@@ -1,30 +1,23 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 app = FastAPI()
 
 
-# Define a data model for a simple item
-class Item(BaseModel):
-    name: str
-    description: str = None
-    price: float
-    quantity: int
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data.lower() == "exit":
+                await websocket.send_text("Goodbye!")
+                break
+            await websocket.send_text(f"Echo: {data}")
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    finally:
+        await websocket.close()
 
-
-# Root endpoint
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI app!"}
-
-
-# GET endpoint
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "query": q}
-
-
-# POST endpoint
-@app.post("/items/")
-def create_item(item: Item):
-    return {"item": item}
+async def root():
+    return {"message": "Hello World"}
