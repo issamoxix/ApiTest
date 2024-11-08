@@ -8,9 +8,12 @@ names = ["John", "Jane", "Bob", "Alice"]
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
-        for name in names:
-            await websocket.send_text(name)
-            sleep(1)
+        while True:
+            data = await websocket.receive_text()
+            for name in names:
+                await websocket.send_text(name)
+                sleep(1)
+            break
     except WebSocketDisconnect:
         print("Client disconnected")
     finally:
