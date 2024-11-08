@@ -12,7 +12,7 @@ async def websocket_endpoint(websocket: WebSocket):
             if data.lower() == "exit":
                 await websocket.send_text("Goodbye!")
                 break
-            await websocket.send_text(f"Echo: {data}")
+            await websocket.send_json({"message": data})
     except WebSocketDisconnect:
         print("Client disconnected")
     finally:
