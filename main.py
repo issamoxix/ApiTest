@@ -1,5 +1,5 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from time import sleep
+import asyncio
 
 app = FastAPI()
 
@@ -12,7 +12,7 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             for name in names:
                 await websocket.send_text(name)
-                sleep(1)
+                await asyncio.sleep(1)
             break
     except WebSocketDisconnect:
         print("Client disconnected")
