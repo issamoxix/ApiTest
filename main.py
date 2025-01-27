@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
+from datetime import datetime
 
 app = FastAPI()
 
@@ -21,4 +22,5 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/")
 async def root():
+    print(datetime.now())
     return {"message": "Hello World"}
