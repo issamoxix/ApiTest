@@ -25,7 +25,7 @@ async def websocket_endpoint(websocket: WebSocket):
         await websocket.close()
 
 @app.get("/")
-async def root():
-    logger.info("Request been invoked")
+async def root(event: str = None):
+    logger.info(event)
     logger.info(datetime.now())
     return {"message": "Hello World"}
