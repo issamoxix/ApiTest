@@ -1,8 +1,12 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 from datetime import datetime
+import logging
 
 app = FastAPI()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 names = ["John", "Jane", "Bob", "Alice"]
 @app.websocket("/ws")
@@ -22,5 +26,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.get("/")
 async def root():
-    print(datetime.now())
+    logger.info("Request been invoked")
+    logger.info(datetime.now())
     return {"message": "Hello World"}
