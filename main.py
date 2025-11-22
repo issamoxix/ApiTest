@@ -29,8 +29,3 @@ async def root(event: str = None):
     logger.info(event)
     logger.info(datetime.now())
     return {"message": "Hello World"}
-
-if __name __ == "__main__":
-    import uvicorn
-
-    uvicorn.run(app, host="0.0.0.0", port=8000)
