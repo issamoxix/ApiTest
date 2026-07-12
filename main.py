@@ -1,5 +1,4 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import asyncio
 from datetime import datetime
 import logging
 
@@ -8,24 +7,41 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-names = ["John", "Jane", "Bob", "Alice"]
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    logger.info("Client connected")
     try:
         while True:
             data = await websocket.receive_text()
-            for name in names:
-                await websocket.send_text(name)
-                await asyncio.sleep(1)
-            break
+            logger.info(f"Received: {data}")
+            await websocket.send_text(data)
+            logger.info(f"Echoed back: {data}")
     except WebSocketDisconnect:
-        print("Client disconnected")
+        logger.info("Client disconnected")
     finally:
-        await websocket.close()
+        try:
+            await websocket.close()
+        except RuntimeError:
+            # Socket already closed (e.g. after disconnect)
+            pass
+
 
 @app.get("/")
 async def root(event: str = None):
-    logger.info(event)
-    logger.info(datetime.now())
-    return {"message": "Hello World"}
+    logger.info(f"GET / called with event={event} at {datetime.now()}")
+    return {
+        "message": "Echo test API is running",
+        "you_sent": event,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/echo")
+async def echo_post(payload: dict):
+    logger.info(f"POST /echo received payload: {payload}")
+    return {
+        "you_sent": payload,
+        "timestamp": datetime.now().isoformat(),
+    }
