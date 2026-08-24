@@ -7,6 +7,8 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+DOMINIC_LAW = False
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -45,8 +47,16 @@ async def echo_post(payload: dict):
         "you_sent": payload,
         "timestamp": datetime.now().isoformat(),
     }
+
+@app.post("/dominic")
+async def echo_post(payload: dict):
+    DOMINIC_LAW = payload.get("status", False)
+    return {
+        "DOMINIC_LAW": DOMINIC_LAW,
+        
+    }
 @app.get("/dominic")
 async def echo_post():
     return {
-        "status": False,
+        "status": DOMINIC_LAW,
     }
