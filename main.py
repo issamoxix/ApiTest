@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 DOMINIC_LAW = True
 
-# Most recent acknowledgement received. `None` until the first one arrives.
-LATEST_ACK = None
+# Acknowledgement history, newest first. Capped at MAX_ACKS entries.
+ACK_HISTORY = []
+MAX_ACKS = 10
 
 
 @app.websocket("/ws")
@@ -71,19 +72,21 @@ async def get_dominic():
 
 @app.post("/dominic/ack")
 async def send_ack(payload: dict):
-    global LATEST_ACK
+    global ACK_HISTORY
     message = payload.get("message", "Acknowledged")
-    LATEST_ACK = {
+    entry = {
         "message": message,
         "timestamp": datetime.now().isoformat(),
     }
-    logger.info(f"Acknowledgement received: {LATEST_ACK}")
-    return LATEST_ACK
+    ACK_HISTORY.insert(0, entry)
+    ACK_HISTORY = ACK_HISTORY[:MAX_ACKS]
+    logger.info(f"Acknowledgement received: {entry}")
+    return entry
 
 
 @app.get("/dominic/ack")
 async def get_ack():
-    return LATEST_ACK or {"message": None, "timestamp": None}
+    return {"acknowledgements": ACK_HISTORY}
 
 
 DOMINIC_UI_HTML = """
@@ -265,23 +268,43 @@ DOMINIC_UI_HTML = """
     opacity: 1;
     border-left-color: var(--brass-bright);
   }
-  .ack-panel.flash {
-    animation: ackFlash 0.9s ease;
-  }
-  @keyframes ackFlash {
-    0% { background: rgba(216, 176, 84, 0.25); }
-    100% { background: rgba(176, 141, 62, 0.06); }
-  }
   .ack-label {
     font-family: 'Courier New', ui-monospace, monospace;
     font-size: 10px;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--brass);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .ack-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+  .ack-empty {
+    font-size: 13px;
+    color: var(--parchment-dim);
+    font-style: italic;
+  }
+  .ack-entry {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ack-entry:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .ack-entry.flash {
+    animation: ackFlash 0.9s ease;
+  }
+  @keyframes ackFlash {
+    0% { background: rgba(216, 176, 84, 0.25); }
+    100% { background: rgba(176, 141, 62, 0); }
   }
   .ack-message {
-    font-size: 15px;
+    font-size: 14px;
     color: var(--parchment);
     line-height: 1.5;
     font-style: italic;
@@ -290,7 +313,7 @@ DOMINIC_UI_HTML = """
     font-family: 'Courier New', ui-monospace, monospace;
     font-size: 10px;
     color: var(--parchment-dim);
-    margin-top: 8px;
+    margin-top: 4px;
   }
 
   .footnote {
@@ -332,9 +355,10 @@ DOMINIC_UI_HTML = """
     <div class="meta" id="meta">Fetching current status…</div>
 
     <div class="ack-panel" id="ackPanel">
-      <div class="ack-label">Latest Acknowledgement</div>
-      <div class="ack-message" id="ackMessage">None received yet</div>
-      <div class="ack-time" id="ackTime"></div>
+      <div class="ack-label">Last 10 Acknowledgements</div>
+      <div class="ack-list" id="ackList">
+        <div class="ack-empty" id="ackEmpty">None received yet</div>
+      </div>
     </div>
   </div>
 </div>
@@ -347,12 +371,11 @@ DOMINIC_UI_HTML = """
   const meta = document.getElementById('meta');
 
   const ackPanel = document.getElementById('ackPanel');
-  const ackMessage = document.getElementById('ackMessage');
-  const ackTime = document.getElementById('ackTime');
+  const ackList = document.getElementById('ackList');
 
   let currentStatus = null;
   let busy = false;
-  let lastAckTimestamp = null;
+  let lastSeenTimestamp = null;
 
   function render(status) {
     currentStatus = status;
@@ -414,23 +437,34 @@ DOMINIC_UI_HTML = """
       const res = await fetch('/dominic/ack');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (!data.message) return;
+      const entries = data.acknowledgements || [];
 
-      const isNew = data.timestamp !== lastAckTimestamp;
-      lastAckTimestamp = data.timestamp;
+      if (entries.length === 0) {
+        ackPanel.classList.remove('has-ack');
+        ackList.innerHTML = '<div class="ack-empty">None received yet</div>';
+        return;
+      }
+
+      const newestTimestamp = entries[0].timestamp;
+      const hasNewEntry = newestTimestamp !== lastSeenTimestamp;
+      lastSeenTimestamp = newestTimestamp;
 
       ackPanel.classList.add('has-ack');
-      ackMessage.textContent = data.message;
-      ackTime.textContent = new Date(data.timestamp).toLocaleString();
-
-      if (isNew) {
-        ackPanel.classList.remove('flash');
-        void ackPanel.offsetWidth; // restart animation
-        ackPanel.classList.add('flash');
-      }
+      ackList.innerHTML = entries.map((entry, i) => `
+        <div class="ack-entry${i === 0 && hasNewEntry ? ' flash' : ''}">
+          <div class="ack-message">${escapeHtml(entry.message)}</div>
+          <div class="ack-time">${new Date(entry.timestamp).toLocaleString()}</div>
+        </div>
+      `).join('');
     } catch (err) {
       // Silently ignore — the status meta line already reports connectivity issues.
     }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   fetchStatus();
