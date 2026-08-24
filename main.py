@@ -46,9 +46,7 @@ async def echo_post(payload: dict):
         "timestamp": datetime.now().isoformat(),
     }
 @app.get("/dominic")
-async def echo_post(payload: dict):
-    logger.info(f"POST /echo received payload: {payload}")
+async def echo_post():
     return {
         "status": False,
-
     }
