@@ -7,7 +7,7 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DOMINIC_LAW = False
+DOMINIC_LAW = True
 
 
 @app.websocket("/ws")
