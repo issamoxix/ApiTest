@@ -48,5 +48,5 @@ async def echo_post(payload: dict):
 @app.get("/dominic")
 async def echo_post():
     return {
-        "status": False,
+        "status": True,
     }
