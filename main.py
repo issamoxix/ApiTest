@@ -69,6 +69,13 @@ async def get_dominic():
         "status": DOMINIC_LAW,
     }
 
+@app.get("/extrackt")
+async def get_extract():
+    print("OLSHDJQHSLDKJHQLK")
+    return {
+        "status": "this is a extract website guide",
+    }
+
 
 @app.post("/dominic/ack")
 async def send_ack(payload: dict):
